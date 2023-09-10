@@ -16,9 +16,9 @@ app.MapGet("add/{key}/{value}", async ([FromRoute] string key, [FromRoute] strin
 });
 app.MapGet("get/{key}", async ([FromRoute] string key) =>
 {
-    var lockTake = await redisDataBase.LockTakeAsync($"lock-{key}", key, TimeSpan.FromMinutes(1));
+    var isAvailable = await redisDataBase.LockTakeAsync($"lock-{key}", key, TimeSpan.FromMinutes(2));
 
-    if (lockTake)
+    if (isAvailable)
         return Results.Ok(new { Value = (string)redisDataBase.StringGet(key)! });
     
     return Results.Ok(new { Value = "Key requested is locked yet. Wait to release " });
@@ -26,16 +26,5 @@ app.MapGet("get/{key}", async ([FromRoute] string key) =>
 app.MapGet("release/{key}", async ([FromRoute] string key) =>
 {
     await redisDataBase.LockReleaseAsync($"lock-{key}", key);
-});
-app.MapGet("batch-lock/{key}", () =>
-{
-    Parallel.For(1, 10, async (a) =>
-    {
-        var lockTake = await redisDataBase.LockTakeAsync($"lock-teste", a, TimeSpan.FromMinutes(1));
-        if(lockTake)
-            Console.WriteLine($"Loop number {a} set lock");
-    });
-
-    return Results.Ok();
 });
 app.Run("http://localhost:3000");
